@@ -7,27 +7,35 @@ const app = express();
 app.use(express.json());
 app.use(cors({ origin: "*" }));
 
-// 🟢 Test root
+// Default route
 app.get("/", (req, res) => {
   res.send("✅ MarketMind Hub backend (Cashfree Sandbox) is running fine!");
 });
 
-// 🧩 Load env vars
+// Debug route (optional)
+app.get("/debug", (req, res) => {
+  res.json({
+    CASHFREE_APP_ID: process.env.CASHFREE_APP_ID ? "✅ Loaded" : "❌ Missing",
+    CASHFREE_SECRET_KEY: process.env.CASHFREE_SECRET_KEY ? "✅ Loaded" : "❌ Missing",
+    CASHFREE_API_BASE: process.env.CASHFREE_API_BASE || "❌ Missing"
+  });
+});
+
+// Environment Variables
 const CASHFREE_APP_ID = process.env.CASHFREE_APP_ID;
 const CASHFREE_SECRET_KEY = process.env.CASHFREE_SECRET_KEY;
 const CASHFREE_API_BASE = process.env.CASHFREE_API_BASE || "https://sandbox.cashfree.com";
 
 if (!CASHFREE_APP_ID || !CASHFREE_SECRET_KEY) {
-  console.error("❌ Missing Cashfree API keys. Add them in Railway → Variables");
+  console.error("❌ Missing Cashfree keys — check Railway Variables!");
 }
 
-// 🧾 Payment route
+// Payment creation route
 app.post("/create-cashfree-payment", async (req, res) => {
+  const { name, email, phone, amount, purpose } = req.body;
+  console.log("🟢 Payment initiated:", { name, phone, amount, purpose });
+
   try {
-    const { name, email, phone, amount, purpose } = req.body;
-
-    console.log("📦 Creating payment for:", { name, phone, amount, purpose });
-
     const response = await axios.post(
       `${CASHFREE_API_BASE}/pg/orders`,
       {
@@ -52,7 +60,7 @@ app.post("/create-cashfree-payment", async (req, res) => {
       }
     );
 
-    console.log("✅ Cashfree API response:", response.data);
+    console.log("✅ Cashfree API success:", response.data);
     res.json({ success: true, payment_link: response.data.payment_link });
 
   } catch (err) {
@@ -61,6 +69,6 @@ app.post("/create-cashfree-payment", async (req, res) => {
   }
 });
 
-// 🟢 Start server
+// Start server
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => console.log(`🚀 Server running on port ${PORT}`));
