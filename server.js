@@ -49,9 +49,9 @@ app.post("/create-cashfree-payment", async (req, res) => {
         customer_phone: phone || "",
       },
       order_meta: {
-        // Cashfree replaces {order_id} with real ID
-        return_url: `${FRONTEND_URL}/verify.html?product_id=${encodeURIComponent(productId)}&order_id={order_id}`,
-      },
+        return_url: `${FRONTEND_URL}/verify.html?product_id=${encodeURIComponent(productId)}&order_id={order_id}`
+      }
+
     };
 
     const response = await axios.post(`${CASHFREE_API_BASE}/pg/orders`, payload, {
