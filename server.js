@@ -7,32 +7,28 @@ const app = express();
 app.use(express.json());
 app.use(cors({ origin: "*" }));
 
-// 🟢 Base Info
 app.get("/", (req, res) => {
-  res.send("✅ MarketMind Hub backend (Cashfree PG V2 — Production) is running fine!");
+  res.send("✅ MarketMind Hub backend (Cashfree Production) running fine!");
 });
 
 app.get("/debug", (req, res) => {
   res.json({
-    CASHFREE_APP_ID: process.env.CASHFREE_APP_ID ? "✅ Loaded" : "❌ Missing",
-    CASHFREE_SECRET_KEY: process.env.CASHFREE_SECRET_KEY ? "✅ Loaded" : "❌ Missing"
+    APP_ID: process.env.CASHFREE_APP_ID ? "✅ Loaded" : "❌ Missing",
+    SECRET: process.env.CASHFREE_SECRET_KEY ? "✅ Loaded" : "❌ Missing",
+    BASE: process.env.CASHFREE_API_BASE || "❌ Missing",
   });
 });
 
-// 🟢 Load from Railway Variables
 const CASHFREE_APP_ID = process.env.CASHFREE_APP_ID;
 const CASHFREE_SECRET_KEY = process.env.CASHFREE_SECRET_KEY;
-
-// ✅ Production base URL
-const CASHFREE_API_BASE = "https://api.cashfree.com"; // not sandbox
+const CASHFREE_API_BASE = process.env.CASHFREE_API_BASE || "https://api.cashfree.com";
 
 if (!CASHFREE_APP_ID || !CASHFREE_SECRET_KEY) {
   console.error("❌ Missing Cashfree keys — check Railway Variables!");
 }
 
-// 🧩 Create Payment Route
 app.post("/create-cashfree-payment", async (req, res) => {
-  const { name, email, phone, amount, purpose, productId } = req.body;
+  const { name, email, phone, amount, purpose } = req.body;
   console.log("🟢 Payment initiated:", { name, phone, amount, purpose });
 
   try {
@@ -45,32 +41,38 @@ app.post("/create-cashfree-payment", async (req, res) => {
         customer_details: {
           customer_id: "CUST_" + Date.now(),
           customer_email: email || "buyer@marketmindhub.com",
-          customer_phone: phone
+          customer_phone: phone,
         },
         order_meta: {
-          return_url: `https://market-mind-hub.netlify.app/success.html?order_id={order_id}&product_id=${productId}`
-        }
+          return_url: "https://market-mind-hub.netlify.app/success.html?order_id={order_id}",
+        },
       },
       {
         headers: {
           "x-client-id": CASHFREE_APP_ID,
           "x-client-secret": CASHFREE_SECRET_KEY,
-          "Content-Type": "application/json"
-        }
+          "x-api-version": "2022-01-01",
+          "Content-Type": "application/json",
+        },
       }
     );
 
     console.log("✅ Cashfree API success:", response.data);
-    res.json({ success: true, payment_link: response.data.payment_link });
-
+    res.json({
+      success: true,
+      payment_link:
+        response.data.payment_link ||
+        response.data.data?.payment_link ||
+        response.data.data?.payment_url,
+    });
   } catch (err) {
     console.error("❌ Cashfree Error:", err.response?.data || err.message);
     res.status(500).json({
       success: false,
-      error: err.response?.data || "Cashfree payment creation failed"
+      error: err.response?.data || err.message,
     });
   }
 });
 
 const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => console.log(`🚀 MarketMind Hub backend running on port ${PORT}`));
+app.listen(PORT, () => console.log(`🚀 Server running on port ${PORT}`));
