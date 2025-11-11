@@ -17,7 +17,7 @@ app.get("/", (req, res) => {
 const CASHFREE_APP_ID = process.env.CASHFREE_APP_ID;
 const CASHFREE_SECRET_KEY = process.env.CASHFREE_SECRET_KEY;
 // Choose API base via env, default to sandbox for safe testing
-const CASHFREE_API_BASE = process.env.CASHFREE_API_BASE || "https://sandbox.cashfree.com";
+const CASHFREE_API_BASE = process.env.CASHFREE_API_BASE || "https://api.cashfree.com";
 
 if (!CASHFREE_APP_ID || !CASHFREE_SECRET_KEY) {
   console.warn("⚠️ CASHFREE_APP_ID or CASHFREE_SECRET_KEY not set in env. Set them in Replit/Render secrets.");
