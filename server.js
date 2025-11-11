@@ -7,29 +7,26 @@ const app = express();
 app.use(express.json());
 app.use(cors({ origin: "*" }));
 
-// ✅ Root route (for Railway check)
+// 🟢 Test root
 app.get("/", (req, res) => {
-  res.send("✅ MarketMind Hub backend (Cashfree) is running properly on Railway");
+  res.send("✅ MarketMind Hub backend (Cashfree Sandbox) is running fine!");
 });
 
-// ✅ Load Cashfree keys from environment
+// 🧩 Load env vars
 const CASHFREE_APP_ID = process.env.CASHFREE_APP_ID;
 const CASHFREE_SECRET_KEY = process.env.CASHFREE_SECRET_KEY;
 const CASHFREE_API_BASE = process.env.CASHFREE_API_BASE || "https://sandbox.cashfree.com";
 
-// ✅ Validate keys at startup
 if (!CASHFREE_APP_ID || !CASHFREE_SECRET_KEY) {
-  console.error("❌ Cashfree keys missing in Railway environment variables!");
+  console.error("❌ Missing Cashfree API keys. Add them in Railway → Variables");
 }
 
-// ✅ Create Payment
+// 🧾 Payment route
 app.post("/create-cashfree-payment", async (req, res) => {
   try {
     const { name, email, phone, amount, purpose } = req.body;
 
-    if (!name || !phone || !amount) {
-      return res.status(400).json({ success: false, error: "Missing fields" });
-    }
+    console.log("📦 Creating payment for:", { name, phone, amount, purpose });
 
     const response = await axios.post(
       `${CASHFREE_API_BASE}/pg/orders`,
@@ -55,13 +52,15 @@ app.post("/create-cashfree-payment", async (req, res) => {
       }
     );
 
+    console.log("✅ Cashfree API response:", response.data);
     res.json({ success: true, payment_link: response.data.payment_link });
+
   } catch (err) {
-    console.error("❌ Error creating Cashfree payment:", err.response?.data || err.message);
+    console.error("❌ Cashfree Error:", err.response?.data || err.message);
     res.status(500).json({ success: false, error: "Cashfree payment creation failed" });
   }
 });
 
-// ✅ Use Railway's assigned port
-const PORT = process.env.PORT || 5000;
+// 🟢 Start server
+const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => console.log(`🚀 Server running on port ${PORT}`));
