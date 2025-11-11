@@ -82,5 +82,6 @@ app.post("/create-cashfree-payment", async (req, res) => {
 });
 
 // Use dynamic port for Replit / Render
-const PORT = process.env.PORT || 3000;
+const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => console.log(`🚀 Cashfree backend running on port ${PORT}`));
+
