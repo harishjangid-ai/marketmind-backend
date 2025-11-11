@@ -1,4 +1,3 @@
-// server.js
 require("dotenv").config();
 const express = require("express");
 const axios = require("axios");
@@ -8,80 +7,61 @@ const app = express();
 app.use(express.json());
 app.use(cors({ origin: "*" }));
 
-// Health route
+// ✅ Root route (for Railway check)
 app.get("/", (req, res) => {
-  res.send("✅ MarketMind Hub backend (Cashfree) is running");
+  res.send("✅ MarketMind Hub backend (Cashfree) is running properly on Railway");
 });
 
-// Read keys from environment (do NOT hardcode)
+// ✅ Load Cashfree keys from environment
 const CASHFREE_APP_ID = process.env.CASHFREE_APP_ID;
 const CASHFREE_SECRET_KEY = process.env.CASHFREE_SECRET_KEY;
-// Choose API base via env, default to sandbox for safe testing
-const CASHFREE_API_BASE = process.env.CASHFREE_API_BASE || "https://api.cashfree.com";
+const CASHFREE_API_BASE = process.env.CASHFREE_API_BASE || "https://sandbox.cashfree.com";
 
+// ✅ Validate keys at startup
 if (!CASHFREE_APP_ID || !CASHFREE_SECRET_KEY) {
-  console.warn("⚠️ CASHFREE_APP_ID or CASHFREE_SECRET_KEY not set in env. Set them in Replit/Render secrets.");
+  console.error("❌ Cashfree keys missing in Railway environment variables!");
 }
 
-// Create Cashfree order (returns payment link)
+// ✅ Create Payment
 app.post("/create-cashfree-payment", async (req, res) => {
-  const { name, email, phone, amount, purpose, productId } = req.body;
-
-  if (!amount) return res.status(400).json({ success: false, error: "Missing amount" });
-  if (!CASHFREE_APP_ID || !CASHFREE_SECRET_KEY) {
-    return res.status(500).json({ success: false, error: "Server misconfigured (missing Cashfree keys)" });
-  }
-
   try {
-    const payload = {
-      order_amount: Number(amount),
-      order_currency: "INR",
-      order_note: purpose || "MarketMind Hub Order",
-      customer_details: {
-        customer_id: (phone || "CUST") + "_" + Date.now(),
-        customer_email: email || "",
-        customer_phone: phone || ""
-      },
-      order_meta: {
-        // Cashfree will replace {order_id} with internal id on return
-        return_url: "https://market-mind-hub.netlify.app/success.html?order_id={order_id}"
-      }
-    };
+    const { name, email, phone, amount, purpose } = req.body;
 
-    const endpoint = `${CASHFREE_API_BASE.replace(/\/$/, "")}/pg/orders`;
-
-    const response = await axios.post(endpoint, payload, {
-      headers: {
-        "x-client-id": CASHFREE_APP_ID,
-        "x-client-secret": CASHFREE_SECRET_KEY,
-        "Content-Type": "application/json"
-      },
-      timeout: 15000
-    });
-
-    // Response structure may vary between sandbox & production
-    // We try to return the payment_link if present
-    const data = response.data || {};
-    // If Cashfree returns link under data.payment_link or data.data.payment_link
-    const payment_link = data.payment_link || data.data?.payment_link || data.data?.redirect_url || data.redirect_url;
-
-    // Optional: Log the order server-side for later verification (you can expand)
-    console.log("Cashfree create order response:", JSON.stringify(data).slice(0, 1000));
-
-    if (!payment_link) {
-      return res.status(500).json({ success: false, error: "No payment link returned", raw: data });
+    if (!name || !phone || !amount) {
+      return res.status(400).json({ success: false, error: "Missing fields" });
     }
 
-    // Return payment link to frontend
-    res.json({ success: true, payment_link, raw: data });
+    const response = await axios.post(
+      `${CASHFREE_API_BASE}/pg/orders`,
+      {
+        order_amount: Number(amount),
+        order_currency: "INR",
+        order_note: purpose || "MarketMind Hub Order",
+        customer_details: {
+          customer_id: "CUST_" + Date.now(),
+          customer_email: email || "buyer@marketmindhub.com",
+          customer_phone: phone
+        },
+        order_meta: {
+          return_url: "https://market-mind-hub.netlify.app/success.html?order_id={order_id}"
+        }
+      },
+      {
+        headers: {
+          "x-client-id": CASHFREE_APP_ID,
+          "x-client-secret": CASHFREE_SECRET_KEY,
+          "Content-Type": "application/json"
+        }
+      }
+    );
+
+    res.json({ success: true, payment_link: response.data.payment_link });
   } catch (err) {
-    console.error("❌ Cashfree Error:", err.response?.data || err.message);
-    const message = err.response?.data || err.message || "Unknown error";
-    res.status(500).json({ success: false, error: message });
+    console.error("❌ Error creating Cashfree payment:", err.response?.data || err.message);
+    res.status(500).json({ success: false, error: "Cashfree payment creation failed" });
   }
 });
 
-// Use dynamic port for Replit / Render
+// ✅ Use Railway's assigned port
 const PORT = process.env.PORT || 5000;
-app.listen(PORT, () => console.log(`🚀 Cashfree backend running on port ${PORT}`));
-
+app.listen(PORT, () => console.log(`🚀 Server running on port ${PORT}`));
